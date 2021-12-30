@@ -20,7 +20,6 @@
 _extra/
 logs/
 *.log
-error_log/
 
 TODO
 LAST_BUILD
