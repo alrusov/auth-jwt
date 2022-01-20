@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/dgrijalva/jwt-go/v4"
 
@@ -27,9 +26,8 @@ type (
 	}
 
 	methodOptions struct {
-		Secret    string        `toml:"secret"`
-		LifetimeS string        `toml:"lifetime"`
-		Lifetime  time.Duration `toml:"-"`
+		Secret   string          `toml:"secret"`
+		Lifetime config.Duration `toml:"lifetime"`
 	}
 )
 
@@ -49,7 +47,7 @@ func checkConfig(m *config.AuthMethod) (err error) {
 
 	options, ok := m.Options.(*methodOptions)
 	if !ok {
-		msgs.Add(`%s.checkConfig: Options is "%T", expected "%T"`, module, m.Options, options)
+		msgs.Add(`%s.checkConfig: Options is "%T", "%T" expected`, module, m.Options, options)
 	}
 
 	if !m.Enabled {
@@ -92,16 +90,11 @@ func (ah *AuthHandler) Init(cfg *config.Listener) (err error) {
 
 	options, ok := methodCfg.Options.(*methodOptions)
 	if !ok {
-		return fmt.Errorf(`options for module "%s" is "%T", expected "%T"`, module, methodCfg.Options, options)
+		return fmt.Errorf(`options for module "%s" is "%T", "%T" expected`, module, methodCfg.Options, options)
 	}
 
 	if options.Secret == "" {
 		return fmt.Errorf(`secret for module "%s" cannot be empty`, module)
-	}
-
-	options.Lifetime, err = misc.Interval2Duration(options.LifetimeS)
-	if err != nil {
-		return fmt.Errorf(`lifetime for "%s": %s`, module, err)
 	}
 
 	if options.Lifetime <= 0 {
