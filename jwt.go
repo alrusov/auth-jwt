@@ -148,7 +148,7 @@ func (ah *AuthHandler) Check(id uint64, prefix string, path string, w http.Respo
 		code = http.StatusNoContent
 		msg = ""
 
-		s := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
+		s := strings.SplitN(r.Header.Get(auth.Header), " ", 2)
 		if len(s) != 2 || s[0] != method {
 			return
 		}
