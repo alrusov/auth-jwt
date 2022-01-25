@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alrusov/auth"
 	"github.com/alrusov/config"
 	"github.com/alrusov/misc"
 )
@@ -79,7 +80,7 @@ func Test1(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	r.Header.Set(auth.Header, fmt.Sprintf("Bearer %s", token))
 
 	identity, _ := ah.Check(0, "", "/", nil, r)
 	if identity == nil {
