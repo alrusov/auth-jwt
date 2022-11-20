@@ -44,7 +44,7 @@ func init() {
 }
 
 // Проверка валидности дополнительных опций метода
-func (options *methodOptions) Check(cfg interface{}) (err error) {
+func (options *methodOptions) Check(cfg any) (err error) {
 	msgs := misc.NewMessages()
 
 	if options.Secret == "" {
@@ -83,7 +83,7 @@ func (ah *AuthHandler) Init(cfg *config.Listener) (err error) {
 
 	options, ok := methodCfg.Options.(*methodOptions)
 	if !ok {
-		return fmt.Errorf(`options for module "%s" is "%T", "%T" expected`, module, methodCfg.Options, options)
+		return fmt.Errorf(`options for module "%s" is "%T", expected "%T"`, module, methodCfg.Options, options)
 	}
 
 	if options.Secret == "" {
@@ -155,7 +155,7 @@ func (ah *AuthHandler) Check(id uint64, prefix string, path string, w http.Respo
 
 		code = http.StatusForbidden
 
-		keyFunc := func(t *jwt.Token) (interface{}, error) {
+		keyFunc := func(t *jwt.Token) (any, error) {
 			return []byte(ah.options.Secret), nil
 		}
 

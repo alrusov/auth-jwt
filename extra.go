@@ -85,7 +85,7 @@ func GetToken(cfg *config.Listener, id uint64, path string, w http.ResponseWrite
 	if exists {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(code)
-		var v interface{}
+		var v any
 
 		if code != http.StatusOK {
 			v = struct {

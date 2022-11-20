@@ -54,15 +54,15 @@ func Test1(t *testing.T) {
 
 	mScore := ah.Score()
 	if mScore != score {
-		t.Fatalf("got score %d, %d expected", mScore, score)
+		t.Fatalf("got score %d, expected %d", mScore, score)
 	}
 
 	mAuthHeader, mWithRealm := ah.WWWAuthHeader()
 	if mAuthHeader != method {
-		t.Fatalf(`got header "%s", "%s" expected`, mAuthHeader, method)
+		t.Fatalf(`got header "%s", expected "%s"`, mAuthHeader, method)
 	}
 	if mWithRealm {
-		t.Fatalf(`got withRealm "%v", "%v" expected`, mWithRealm, false)
+		t.Fatalf(`got withRealm "%v", expected "%v"`, mWithRealm, false)
 	}
 
 	token, exp, err := MakeToken(user, secret, lifetime)
@@ -72,7 +72,7 @@ func Test1(t *testing.T) {
 
 	exp0 := misc.NowUnix() + int64(lifetime.Seconds())
 	if math.Abs(float64(exp-exp0)) > 2 {
-		t.Fatalf("exp got %d, about %d expected", exp, exp0)
+		t.Fatalf("exp got %d, expected about %d", exp, exp0)
 	}
 
 	r, err := http.NewRequest("GET", "/", nil)
@@ -88,7 +88,7 @@ func Test1(t *testing.T) {
 	}
 
 	if identity.User != user {
-		t.Fatalf(`got user "%s", "%s" expected`, identity.User, user)
+		t.Fatalf(`got user "%s", expected "%s"`, identity.User, user)
 	}
 
 	fmt.Println(token)

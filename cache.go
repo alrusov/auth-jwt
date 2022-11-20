@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/alrusov/misc"
+	"github.com/alrusov/panic"
 )
 
 //----------------------------------------------------------------------------------------------------------------------------//
@@ -27,6 +28,9 @@ var (
 
 func init() {
 	go func() {
+		panicID := panic.ID()
+		defer panic.SaveStackToLogEx(panicID)
+
 		for {
 			if !misc.Sleep(30 * time.Minute) {
 				return
