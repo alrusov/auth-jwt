@@ -64,7 +64,7 @@ func GetToken(cfg *config.Listener, id uint64, path string, w http.ResponseWrite
 			return
 		}
 
-		msg, _, err := MakeToken(u, options.Secret, time.Duration(options.Lifetime))
+		msg, _, err := MakeToken(u, options.Secret, options.Lifetime.D())
 		if err != nil {
 			msg = err.Error()
 			return
