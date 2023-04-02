@@ -141,9 +141,6 @@ func (ah *AuthHandler) Check(id uint64, prefix string, path string, w http.Respo
 		return nil, true
 	}
 
-	var userDef config.User
-	u := ""
-
 	code, msg := func() (code int, msg string) {
 		code = http.StatusNoContent
 		msg = ""
@@ -173,25 +170,27 @@ func (ah *AuthHandler) Check(id uint64, prefix string, path string, w http.Respo
 			return
 		}
 
-		u, _ = ui.(string)
-		userDef, exists = ah.authCfg.Users[u]
-		if !exists {
-			msg = fmt.Sprintf(`Unknown user "%v"`, ui)
+		u, _ := ui.(string)
+
+		identity, err = auth.StdGetIdentity(u)
+		if err != nil {
+			msg = err.Error()
 			return
 		}
+
+		if identity == nil {
+			msg = fmt.Sprintf(`Unknown user "%s"`, u)
+			return
+		}
+
+		identity.Method = module
 
 		code = http.StatusOK
 		return
 	}()
 
 	if code == http.StatusOK {
-		return &auth.Identity{
-				Method: module,
-				User:   u,
-				Groups: userDef.Groups,
-				Extra:  nil,
-			},
-			false
+		return identity, false
 	}
 
 	if code == http.StatusNoContent {

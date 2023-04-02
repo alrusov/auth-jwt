@@ -41,6 +41,8 @@ func Test1(t *testing.T) {
 		},
 	}
 
+	auth.AddStdIdentityProvider(&auth.LocalIdentityProvider{}, &cfg.Auth)
+
 	ah := &AuthHandler{}
 
 	err := ah.Init(cfg)
