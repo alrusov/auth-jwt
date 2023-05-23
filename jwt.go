@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -26,8 +27,9 @@ type (
 	}
 
 	methodOptions struct {
-		Secret   string          `toml:"secret"`
-		Lifetime config.Duration `toml:"lifetime"`
+		Secret          string          `toml:"secret"`
+		LifetimeAccess  config.Duration `toml:"lifetime-access"`
+		LifetimeRefresh config.Duration `toml:"lifetime-refresh"`
 	}
 )
 
@@ -51,8 +53,12 @@ func (options *methodOptions) Check(cfg any) (err error) {
 		msgs.Add(`%s.checkConfig: secret parameter isn't defined"`, module)
 	}
 
-	if options.Lifetime <= 0 {
-		msgs.Add(`%s.checkConfig: illegal lifetime"`, module)
+	if options.LifetimeAccess <= 0 {
+		msgs.Add(`%s.checkConfig: illegal lifetime-access"`, module)
+	}
+
+	if options.LifetimeRefresh <= 0 {
+		msgs.Add(`%s.checkConfig: illegal lifetime-refresh"`, module)
 	}
 
 	err = msgs.Error()
@@ -71,7 +77,9 @@ func (ah *AuthHandler) Init(cfg *config.Listener) (err error) {
 		ah.http.AddHandler(ah, false)
 		ah.http.AddEndpointsInfo(
 			misc.StringMap{
-				"/tools/jwt-login": "Get jwt token. Parameters: u=<username>, p=<password>, [json]",
+				"/tools/jwt/login":   "Get jwt access and refresh tokens. Body: {\"username\": <username>, \"password\": <password>}",
+				"/tools/jwt/refresh": "Refresh jwt access and refresh tokens. Body: {\"refresh\": <refresh>}",
+				"/tools/jwt/verify":  "verify jwt access or refresh tokens. Body: {\"token\": <token>}",
 			},
 		)
 	}
@@ -90,8 +98,13 @@ func (ah *AuthHandler) Init(cfg *config.Listener) (err error) {
 		return fmt.Errorf(`secret for module "%s" cannot be empty`, module)
 	}
 
-	if options.Lifetime <= 0 {
-		options.Lifetime = config.JWTdefaultLifetime
+	if options.LifetimeAccess <= 0 {
+		options.LifetimeAccess = config.JWTdefaultLifetime
+	}
+
+	if options.LifetimeRefresh <= 0 {
+		// TODO: Добавить отдельно для Refresh
+		options.LifetimeRefresh = config.JWTdefaultLifetime
 	}
 
 	ah.authCfg = &cfg.Auth
@@ -141,63 +154,18 @@ func (ah *AuthHandler) Check(id uint64, prefix string, path string, w http.Respo
 		return nil, true
 	}
 
-	code, msg := func() (code int, msg string) {
-		code = http.StatusNoContent
-		msg = ""
-
-		s := strings.SplitN(r.Header.Get(auth.Header), " ", 2)
-		if len(s) != 2 || s[0] != method {
-			return
-		}
-
-		code = http.StatusForbidden
-
-		keyFunc := func(t *jwt.Token) (any, error) {
-			return []byte(ah.options.Secret), nil
-		}
-
-		claims := jwt.MapClaims{}
-		_, err := jwt.ParseWithClaims(s[1], claims, keyFunc)
-
-		if err != nil {
-			msg = err.Error()
-			return
-		}
-
-		ui, exists := claims["username"]
-		if !exists {
-			msg = `The "username" claim is not found in the authorization header`
-			return
-		}
-
-		u, _ := ui.(string)
-
-		identity, err = auth.StdGetIdentity(u)
-		if err != nil {
-			msg = err.Error()
-			return
-		}
-
-		if identity == nil {
-			msg = fmt.Sprintf(`Unknown user "%s"`, u)
-			return
-		}
-
-		identity.Method = module
-
-		code = http.StatusOK
-		return
-	}()
-
-	if code == http.StatusOK {
-		return identity, false
-	}
-
-	if code == http.StatusNoContent {
+	token := strings.SplitN(r.Header.Get(auth.Header), " ", 2)
+	if len(token) != 2 || token[0] != method {
 		return nil, true
 	}
 
-	auth.Log.Message(log.INFO, `[%d] JWT login error: %s`, id, msg)
+	identity, err := CheckToken(token[1], "access", ah.options.Secret)
+	if identity != nil {
+		identity.Method = module
+		return identity, false
+	}
+
+	auth.Log.Message(log.INFO, `[%d] JWT login error: %s`, id, err.Error())
 
 	return nil, false
 }
@@ -209,6 +177,7 @@ type claims struct {
 	jwt.StandardClaims `json:"-"`
 	User               string `json:"username"`
 	Exp                int64  `json:"exp"`
+	Type               string `json:"type"`
 }
 
 // Valid --
@@ -217,3 +186,97 @@ func (c claims) Valid(v *jwt.ValidationHelper) error {
 }
 
 //----------------------------------------------------------------------------------------------------------------------------//
+
+func CheckToken(tokenRaw, tokenType, secret string) (*auth.Identity, error) {
+
+	keyFunc := func(t *jwt.Token) (any, error) {
+		return []byte(secret), nil
+	}
+
+	claimsToken := jwt.MapClaims{}
+	_, err := jwt.ParseWithClaims(tokenRaw, claimsToken, keyFunc)
+
+	if err != nil {
+		return nil, err
+	}
+
+	tokenI, exists := claimsToken["type"]
+
+	if !exists {
+		return nil, errors.New(`The "type" claim is not found in the authorization header`)
+	}
+
+	token, _ := tokenI.(string)
+
+	if token != tokenType {
+		return nil, errors.New(fmt.Sprintf(`The token "type" is not %s`, tokenType))
+	}
+
+	ui, exists := claimsToken["username"]
+	if !exists {
+		return nil, errors.New(`The "username" claim is not found in the authorization header`)
+	}
+
+	u, _ := ui.(string)
+
+	identity, err := auth.StdGetIdentity(u)
+	if err != nil {
+		return nil, err
+	}
+
+	if identity == nil {
+		return nil, errors.New(fmt.Sprintf(`Unknown user "%s"`, u))
+	}
+	return identity, nil
+}
+
+// В теории является дубликатом CheckToken, не не знаю как лучше исправить
+func ExtractToken(tokenRaw, secret string) (tokenType string, status bool, err error) {
+	status = false
+	keyFunc := func(t *jwt.Token) (any, error) {
+		return []byte(secret), nil
+	}
+
+	claimsToken := jwt.MapClaims{}
+	_, err = jwt.ParseWithClaims(tokenRaw, claimsToken, keyFunc)
+
+	if err == nil {
+		status = true
+	} else {
+		_, ok := err.(*jwt.TokenExpiredError)
+		if !ok {
+			return
+		}
+	}
+
+	tokenI, exists := claimsToken["type"]
+
+	if !exists {
+		err = errors.New(`The "type" claim is not found in the authorization header`)
+		return
+	}
+
+	tokenType, _ = tokenI.(string)
+
+	if tokenType != "access" && tokenType != "refresh" {
+		err = errors.New(fmt.Sprintf(`Unknown token "type" - %s`, tokenType))
+		return
+	}
+
+	ui, exists := claimsToken["username"]
+	if !exists {
+		return "", false, errors.New(`The "username" claim is not found in the authorization header`)
+	}
+
+	u, _ := ui.(string)
+
+	identity, err := auth.StdGetIdentity(u)
+	if err != nil {
+		return "", false, err
+	}
+
+	if identity == nil {
+		return "", false, errors.New(fmt.Sprintf(`Unknown user "%s"`, u))
+	}
+	return
+}
