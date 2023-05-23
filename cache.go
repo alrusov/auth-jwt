@@ -76,12 +76,12 @@ func ClientHeader(user string, secret string, lifetime time.Duration) (headerStr
 
 	// Создаем заголовок
 
-	headerString, exp, err := MakeToken(user, secret, lifetime)
+	access, _, exp, err := MakeTokens(user, secret, lifetime, lifetime)
 	if err != nil {
 		return
 	}
 
-	headerString = "Bearer " + headerString
+	headerString = "Bearer " + access
 
 	// И кэшируем его
 

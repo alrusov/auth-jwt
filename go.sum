@@ -1,7 +1,7 @@
 github.com/alrusov/auth v0.1.4 h1:zB/Myq3uweFTco7u6AhE1g+3bx2gyAiywaYA24MKuiI=
 github.com/alrusov/auth v0.1.4/go.mod h1:ENjiFSLR7axt6li39U1DFQnNSxupnU12+pZVVlbVP2w=
-github.com/alrusov/config v0.1.53 h1:88hxmVoe7pv9qirOCdxB0pMlOwLTSG0xHl8bIwR4lAs=
-github.com/alrusov/config v0.1.53/go.mod h1:26+Qt3pWdi7h8fK9QmiGBIEj6rdxW8XsN9VFXlYCerM=
+github.com/alrusov/config v0.1.56 h1:sd4mAejsS147QqisddjLV5SBTSkDqqbyPwbtxVCRy3M=
+github.com/alrusov/config v0.1.56/go.mod h1:aZnBFi6jVQRWkROYs0m4arhhD6++cLd4J0iep0EEbvM=
 github.com/alrusov/jsonw v0.1.3 h1:662GZ/2/Ym5hN4z0ut6EbvmdnXfaIK7vSRslmnFpGXw=
 github.com/alrusov/jsonw v0.1.3/go.mod h1:310ODYzX2wl26sdPfdnRZ9R4XW+5lYzZZVCcU/5K2Y4=
 github.com/alrusov/loadavg v0.1.5 h1:MmMPtOo16e9/tcg4WNNlN4PuiSv2ekGypk8GEDWGfA0=
