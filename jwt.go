@@ -99,12 +99,11 @@ func (ah *AuthHandler) Init(cfg *config.Listener) (err error) {
 	}
 
 	if options.LifetimeAccess <= 0 {
-		options.LifetimeAccess = config.JWTdefaultLifetime
+		options.LifetimeAccess = config.JWTdefaultLifetimeAccess
 	}
 
 	if options.LifetimeRefresh <= 0 {
-		// TODO: Добавить отдельно для Refresh
-		options.LifetimeRefresh = config.JWTdefaultLifetime
+		options.LifetimeRefresh = config.JWTdefaultLifetimeRefresh
 	}
 
 	ah.authCfg = &cfg.Auth
