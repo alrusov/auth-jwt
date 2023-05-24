@@ -53,13 +53,13 @@ func (options *methodOptions) Check(cfg any) (err error) {
 		msgs.Add(`%s.checkConfig: secret parameter isn't defined"`, module)
 	}
 
-	if options.LifetimeAccess <= 0 {
-		msgs.Add(`%s.checkConfig: illegal lifetime-access"`, module)
-	}
-
-	if options.LifetimeRefresh <= 0 {
-		msgs.Add(`%s.checkConfig: illegal lifetime-refresh"`, module)
-	}
+	//if options.LifetimeAccess <= 0 {
+	//	msgs.Add(`%s.checkConfig: illegal lifetime-access"`, module)
+	//}
+	//
+	//if options.LifetimeRefresh <= 0 {
+	//	msgs.Add(`%s.checkConfig: illegal lifetime-refresh"`, module)
+	//}
 
 	err = msgs.Error()
 	return
@@ -148,25 +148,25 @@ func (ah *AuthHandler) WWWAuthHeader() (name string, withRealm bool) {
 //----------------------------------------------------------------------------------------------------------------------------//
 
 // Check --
-func (ah *AuthHandler) Check(id uint64, prefix string, path string, w http.ResponseWriter, r *http.Request) (identity *auth.Identity, tryNext bool) {
+func (ah *AuthHandler) Check(id uint64, prefix string, path string, w http.ResponseWriter, r *http.Request) (identity *auth.Identity, tryNext bool, err error) {
 	if ah.options.Secret == "" {
-		return nil, true
+		return nil, true, nil
 	}
 
 	token := strings.SplitN(r.Header.Get(auth.Header), " ", 2)
 	if len(token) != 2 || token[0] != method {
-		return nil, true
+		return nil, true, nil
 	}
 
-	identity, err := CheckToken(token[1], "access", ah.options.Secret)
+	identity, err = CheckToken(token[1], "access", ah.options.Secret)
 	if identity != nil {
 		identity.Method = module
-		return identity, false
+		return identity, false, nil
 	}
 
 	auth.Log.Message(log.INFO, `[%d] JWT login error: %s`, id, err.Error())
 
-	return nil, false
+	return nil, false, err
 }
 
 //----------------------------------------------------------------------------------------------------------------------------//
@@ -208,7 +208,7 @@ func CheckToken(tokenRaw, tokenType, secret string) (*auth.Identity, error) {
 	token, _ := tokenI.(string)
 
 	if token != tokenType {
-		return nil, errors.New(fmt.Sprintf(`The token "type" is not %s`, tokenType))
+		return nil, errors.New(fmt.Sprintf(`Token "type" is not %s`, tokenType))
 	}
 
 	ui, exists := claimsToken["username"]
