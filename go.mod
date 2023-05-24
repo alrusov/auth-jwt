@@ -3,7 +3,7 @@ module github.com/alrusov/auth-jwt
 go 1.20
 
 require (
-	github.com/alrusov/auth v0.1.4
+	github.com/alrusov/auth v0.1.5
 	github.com/alrusov/config v0.1.56
 	github.com/alrusov/jsonw v0.1.3
 	github.com/alrusov/log v0.1.37
