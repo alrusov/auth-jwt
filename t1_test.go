@@ -33,8 +33,9 @@ func Test1(t *testing.T) {
 					Enabled: true,
 					Score:   score,
 					Options: &methodOptions{
-						Secret:   secret,
-						Lifetime: config.Duration(lifetime),
+						Secret:          secret,
+						LifetimeAccess:  config.Duration(lifetime),
+						LifetimeRefresh: config.Duration(lifetime),
 					},
 				},
 			},
@@ -67,7 +68,7 @@ func Test1(t *testing.T) {
 		t.Fatalf(`got withRealm "%v", expected "%v"`, mWithRealm, false)
 	}
 
-	token, exp, err := MakeToken(user, secret, lifetime)
+	token, _, exp, err := MakeTokens(user, secret, lifetime, lifetime)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +85,12 @@ func Test1(t *testing.T) {
 
 	r.Header.Set(auth.Header, fmt.Sprintf("Bearer %s", token))
 
-	identity, _ := ah.Check(0, "", "/", nil, r)
+	identity, _, err := ah.Check(0, "", "/", nil, r)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	if identity == nil {
 		t.Fatalf("authorization failed")
 	}

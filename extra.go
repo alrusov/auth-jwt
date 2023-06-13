@@ -108,13 +108,16 @@ func getToken(cfg *config.Listener, userData UserData) (access, refresh string, 
 		return
 	}
 
-	userDef, exists := cfg.Auth.Users[userData.Username]
-	if !exists || userDef.Password != string(auth.Hash([]byte(userData.Password), []byte(userData.Username))) {
+	identity, exists, err := auth.StdCheckUser(userData.Username, userData.Password, false)
+	if err != nil {
+		return
+	}
+	if !exists || (exists && identity == nil) {
 		err = errors.New(fmt.Sprintf(`Illegal login or password for "%s"`, userData.Username))
 		return
 	}
 
-	access, refresh, _, err = MakeTokens(userData.Username, options.Secret, options.LifetimeAccess.D(), options.LifetimeRefresh.D())
+	access, refresh, _, err = MakeTokens(identity.User, options.Secret, options.LifetimeAccess.D(), options.LifetimeRefresh.D())
 	if err != nil {
 		return
 	}
