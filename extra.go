@@ -47,7 +47,7 @@ func (ah *AuthHandler) Handler(id uint64, prefix string, path string, w http.Res
 	case "/tools/jwt/login":
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
+			return true
 		}
 		processed = true
 		GetToken(ah.http.Config(), id, path, w, r)
@@ -56,7 +56,7 @@ func (ah *AuthHandler) Handler(id uint64, prefix string, path string, w http.Res
 	case "/tools/jwt/refresh":
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
+			return true
 		}
 		processed = true
 		RefreshToken(ah.http.Config(), id, path, w, r)
@@ -64,7 +64,7 @@ func (ah *AuthHandler) Handler(id uint64, prefix string, path string, w http.Res
 	case "/tools/jwt/verify":
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
+			return true
 		}
 		processed = true
 		VerifyToken(ah.http.Config(), id, path, w, r)
