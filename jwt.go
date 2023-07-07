@@ -1,7 +1,6 @@
 package jwt
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -202,18 +201,18 @@ func CheckToken(tokenRaw, tokenType, secret string) (*auth.Identity, error) {
 	tokenI, exists := claimsToken["type"]
 
 	if !exists {
-		return nil, errors.New(`The "type" claim is not found in the authorization header`)
+		return nil, fmt.Errorf(`the "type" claim is not found in the authorization header`)
 	}
 
 	token, _ := tokenI.(string)
 
 	if token != tokenType {
-		return nil, errors.New(fmt.Sprintf(`Token "type" is not %s`, tokenType))
+		return nil, fmt.Errorf(`token "type" is not %s`, tokenType)
 	}
 
 	ui, exists := claimsToken["username"]
 	if !exists {
-		return nil, errors.New(`The "username" claim is not found in the authorization header`)
+		return nil, fmt.Errorf(`the "username" claim is not found in the authorization header`)
 	}
 
 	u, _ := ui.(string)
@@ -224,7 +223,7 @@ func CheckToken(tokenRaw, tokenType, secret string) (*auth.Identity, error) {
 	}
 
 	if identity == nil {
-		return nil, errors.New(fmt.Sprintf(`Unknown user "%s"`, u))
+		return nil, fmt.Errorf(`unknown user "%s"`, u)
 	}
 	return identity, nil
 }
@@ -251,20 +250,20 @@ func ExtractToken(tokenRaw, secret string) (tokenType string, status bool, err e
 	tokenI, exists := claimsToken["type"]
 
 	if !exists {
-		err = errors.New(`The "type" claim is not found in the authorization header`)
+		err = fmt.Errorf(`the "type" claim is not found in the authorization header`)
 		return
 	}
 
 	tokenType, _ = tokenI.(string)
 
 	if tokenType != "access" && tokenType != "refresh" {
-		err = errors.New(fmt.Sprintf(`Unknown token "type" - %s`, tokenType))
+		err = fmt.Errorf(`unknown token "type" - %s`, tokenType)
 		return
 	}
 
 	ui, exists := claimsToken["username"]
 	if !exists {
-		return "", false, errors.New(`The "username" claim is not found in the authorization header`)
+		return "", false, fmt.Errorf(`the "username" claim is not found in the authorization header`)
 	}
 
 	u, _ := ui.(string)
@@ -275,7 +274,9 @@ func ExtractToken(tokenRaw, secret string) (tokenType string, status bool, err e
 	}
 
 	if identity == nil {
-		return "", false, errors.New(fmt.Sprintf(`Unknown user "%s"`, u))
+		return "", false, fmt.Errorf(`unknown user "%s"`, u)
 	}
 	return
 }
+
+//----------------------------------------------------------------------------------------------------------------------------//

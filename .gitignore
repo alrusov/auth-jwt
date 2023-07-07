@@ -20,6 +20,7 @@
 _extra/
 vendor/
 logs/
+*.log
 
 TODO
 LAST_BUILD
@@ -30,4 +31,3 @@ debug.test
 __debug_bin
 
 *.dump
-.idea/

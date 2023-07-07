@@ -2,7 +2,6 @@ package jwt
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -44,18 +43,29 @@ type TokenVerifyStatus struct {
 //----------------------------------------------------------------------------------------------------------------------------//
 
 func (ah *AuthHandler) Handler(id uint64, prefix string, path string, w http.ResponseWriter, r *http.Request) (processed bool) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-	}
 	switch path {
 	case "/tools/jwt/login":
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
 		processed = true
 		GetToken(ah.http.Config(), id, path, w, r)
 		return
+
 	case "/tools/jwt/refresh":
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
 		processed = true
 		RefreshToken(ah.http.Config(), id, path, w, r)
+
 	case "/tools/jwt/verify":
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
 		processed = true
 		VerifyToken(ah.http.Config(), id, path, w, r)
 	}
@@ -104,20 +114,17 @@ func getToken(cfg *config.Listener, userData UserData) (access, refresh string, 
 	}
 
 	if userData.Username == "" {
-		err = errors.New("Empty username")
+		err = fmt.Errorf("empty username")
 		return
 	}
 
-	identity, exists, err := auth.StdCheckUser(userData.Username, userData.Password, false)
-	if err != nil {
-		return
-	}
-	if !exists || (exists && identity == nil) {
-		err = errors.New(fmt.Sprintf(`Illegal login or password for "%s"`, userData.Username))
+	userDef, exists := cfg.Auth.Users[userData.Username]
+	if !exists || userDef.Password != string(auth.Hash([]byte(userData.Password), []byte(userData.Username))) {
+		err = fmt.Errorf(`illegal login or password for "%s"`, userData.Username)
 		return
 	}
 
-	access, refresh, _, err = MakeTokens(identity.User, options.Secret, options.LifetimeAccess.D(), options.LifetimeRefresh.D())
+	access, refresh, _, err = MakeTokens(userData.Username, options.Secret, options.LifetimeAccess.D(), options.LifetimeRefresh.D())
 	if err != nil {
 		return
 	}
@@ -203,7 +210,7 @@ func refreshToken(cfg *config.Listener, token JWTTokens) (access, refresh string
 	}
 
 	if token.Refresh == "" {
-		err = errors.New("Empty refresh field")
+		err = fmt.Errorf("empty refresh field")
 		return
 	}
 
@@ -258,7 +265,7 @@ func verifyToken(cfg *config.Listener, token TokenVerify) (tokenType string, sta
 	}
 
 	if token.Token == "" {
-		err = errors.New("Empty token field")
+		err = fmt.Errorf("empty token field")
 		return
 	}
 
@@ -274,12 +281,14 @@ func verifyToken(cfg *config.Listener, token TokenVerify) (tokenType string, sta
 func getOptions(cfg *config.Listener) (*methodOptions, error) {
 	methodCfg, exists := cfg.Auth.Methods[module]
 	if !exists || !methodCfg.Enabled || methodCfg.Options == nil {
-		return nil, errors.New("JWT auth is disabled")
+		return nil, fmt.Errorf("JWT auth is disabled")
 	}
 
 	options, ok := methodCfg.Options.(*methodOptions)
 	if !ok || options.Secret == "" {
-		return nil, errors.New(fmt.Sprintf(`Method "%s" is misconfigured`, module))
+		return nil, fmt.Errorf(`method "%s" is misconfigured`, module)
 	}
 	return options, nil
 }
+
+//----------------------------------------------------------------------------------------------------------------------------//
