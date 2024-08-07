@@ -2,7 +2,6 @@ package jwt
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -124,7 +123,7 @@ func getToken(cfg *config.Listener, userData UserData) (access, refresh string, 
 		return
 	}
 	if !exists || (exists && identity == nil) {
-		err = errors.New(fmt.Sprintf(`Illegal login or password for "%s"`, userData.Username))
+		err = fmt.Errorf(`illegal login or password for "%s"`, userData.Username)
 		return
 	}
 

@@ -1,20 +1,20 @@
 module github.com/alrusov/auth-jwt
 
-go 1.20
+go 1.22.5
 
 require (
-	github.com/alrusov/auth v0.1.6
-	github.com/alrusov/config v0.1.57
+	github.com/alrusov/auth v0.1.10
+	github.com/alrusov/config v0.1.59
 	github.com/alrusov/jsonw v0.1.3
-	github.com/alrusov/log v0.1.37
-	github.com/alrusov/misc v1.1.9
+	github.com/alrusov/log v0.1.39
+	github.com/alrusov/misc v1.1.15
 	github.com/alrusov/panic v0.1.15
-	github.com/alrusov/stdhttp v0.1.116
+	github.com/alrusov/stdhttp v0.1.120
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
 )
 
 require (
-	github.com/alrusov/loadavg v0.1.5 // indirect
+	github.com/alrusov/loadavg v0.1.6 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect

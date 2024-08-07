@@ -20,7 +20,7 @@ type (
 )
 
 var (
-	cacheMutex        = new(sync.Mutex)
+	cacheMutex        sync.Mutex
 	clientsTokenCache = map[string]clientCacheElement{} // Кэш заголовков, ключ - см. сacheKey()
 )
 
