@@ -47,6 +47,7 @@ func init() {
 // Проверка валидности дополнительных опций метода
 func (options *methodOptions) Check(cfg any) (err error) {
 	msgs := misc.NewMessages()
+	defer msgs.Free()
 
 	if options.Secret == "" {
 		msgs.Add(`%s.checkConfig: secret parameter isn't defined"`, module)
