@@ -87,8 +87,8 @@ func GetToken(cfg *config.Listener, id uint64, path string, w http.ResponseWrite
 	var result any
 
 	if err == nil {
-		auth.Log.Message(log.DEBUG, `[%d] JWT token_access: %s`, id, access)
-		auth.Log.Message(log.DEBUG, `[%d] JWT token_refresh: %s`, id, refresh)
+		// Сами токены в журнал не пишем: это действующие учётные данные
+		auth.Log.Message(log.DEBUG, `[%d] JWT tokens issued for "%s"`, id, userData.Username)
 		code = http.StatusOK
 		result = JWTTokens{Access: access, Refresh: refresh}
 	} else {
@@ -186,8 +186,7 @@ func RefreshToken(cfg *config.Listener, id uint64, path string, w http.ResponseW
 	var result any
 
 	if err == nil {
-		auth.Log.Message(log.DEBUG, `[%d] JWT refresh token_access: %s`, id, access)
-		auth.Log.Message(log.DEBUG, `[%d] JWT refresh token_refresh: %s`, id, refresh)
+		auth.Log.Message(log.DEBUG, `[%d] JWT tokens refreshed`, id)
 		code = http.StatusOK
 		result = JWTTokens{Access: access, Refresh: refresh}
 	} else {
@@ -242,7 +241,7 @@ func VerifyToken(cfg *config.Listener, id uint64, path string, w http.ResponseWr
 	var result any
 
 	if err == nil {
-		auth.Log.Message(log.DEBUG, `[%d] JWT verify token_%s: %s status: %s'`, id, tokenType, token.Token, status)
+		auth.Log.Message(log.DEBUG, `[%d] JWT verify token_%s status: %v`, id, tokenType, status)
 		code = http.StatusOK
 		result = TokenVerifyStatus{Type: tokenType, Status: status}
 	} else {

@@ -186,15 +186,39 @@ func (c claims) Valid(v *jwt.ValidationHelper) error {
 
 //----------------------------------------------------------------------------------------------------------------------------//
 
-func CheckToken(tokenRaw, tokenType, secret string) (*auth.Identity, error) {
-
-	keyFunc := func(t *jwt.Token) (any, error) {
+// KeyFunc -- ключ для проверки подписи токена с секретом secret.
+// Принимается только HS256, которым токены и подписываются (CreateToken): токен с другим alg отвергается
+// до проверки подписи, а не полагается на несовпадение типа ключа.
+func KeyFunc(secret string) jwt.Keyfunc {
+	return func(t *jwt.Token) (any, error) {
+		if t.Method == nil || t.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+			alg := ""
+			if t.Method != nil {
+				alg = t.Method.Alg()
+			}
+			return nil, fmt.Errorf(`unexpected signing method "%s"`, alg)
+		}
 		return []byte(secret), nil
 	}
+}
 
+// Токен без exp библиотека считает бессрочным - такие не принимаем
+func checkExp(claimsToken jwt.MapClaims) error {
+	if _, exists := claimsToken["exp"]; !exists {
+		return fmt.Errorf(`the "exp" claim is not found`)
+	}
+	return nil
+}
+
+func CheckToken(tokenRaw, tokenType, secret string) (*auth.Identity, error) {
 	claimsToken := jwt.MapClaims{}
-	_, err := jwt.ParseWithClaims(tokenRaw, claimsToken, keyFunc)
+	_, err := jwt.ParseWithClaims(tokenRaw, claimsToken, KeyFunc(secret))
 
+	if err != nil {
+		return nil, err
+	}
+
+	err = checkExp(claimsToken)
 	if err != nil {
 		return nil, err
 	}
@@ -232,12 +256,9 @@ func CheckToken(tokenRaw, tokenType, secret string) (*auth.Identity, error) {
 // В теории является дубликатом CheckToken, не не знаю как лучше исправить
 func ExtractToken(tokenRaw, secret string) (tokenType string, status bool, err error) {
 	status = false
-	keyFunc := func(t *jwt.Token) (any, error) {
-		return []byte(secret), nil
-	}
 
 	claimsToken := jwt.MapClaims{}
-	_, err = jwt.ParseWithClaims(tokenRaw, claimsToken, keyFunc)
+	_, err = jwt.ParseWithClaims(tokenRaw, claimsToken, KeyFunc(secret))
 
 	if err == nil {
 		status = true
@@ -246,6 +267,12 @@ func ExtractToken(tokenRaw, secret string) (tokenType string, status bool, err e
 		if !ok {
 			return
 		}
+	}
+
+	err = checkExp(claimsToken)
+	if err != nil {
+		status = false
+		return
 	}
 
 	tokenI, exists := claimsToken["type"]
