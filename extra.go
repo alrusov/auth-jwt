@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dgrijalva/jwt-go/v4"
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/alrusov/auth"
 	"github.com/alrusov/config"
@@ -161,13 +161,12 @@ func MakeTokens(username string, secret string, lifetimeAccess, lifetimeRefresh 
 
 func CreateToken(username string, secret string, tokenType string, now, exp time.Time) (token string, err error) {
 	claims := claims{
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: jwt.At(exp),
-			IssuedAt:  jwt.At(now),
-		},
 		User: username,
-		Exp:  exp.Unix(),
 		Type: tokenType,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(exp),
+			IssuedAt:  jwt.NewNumericDate(now),
+		},
 	}
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return t.SignedString([]byte(secret))

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dgrijalva/jwt-go/v4"
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/alrusov/auth"
 	"github.com/alrusov/config"
@@ -71,6 +71,37 @@ func TestCheckTokenAlgAndExp(t *testing.T) {
 
 	if _, status, err := ExtractToken(cases[2].token, secret); status || err == nil {
 		t.Errorf(`ExtractToken without exp: expected error, got %v %v`, status, err)
+	}
+
+	// /tools/jwt/verify: просроченный - не ошибка, status = false; действующий - status = true; HS512 - ошибка
+	if tp, status, err := ExtractToken(cases[3].token, secret); status || err != nil || tp != "access" {
+		t.Errorf(`ExtractToken expired: %q %v %v`, tp, status, err)
+	}
+	if tp, status, err := ExtractToken(good, secret); !status || err != nil || tp != "access" {
+		t.Errorf(`ExtractToken good: %q %v %v`, tp, status, err)
+	}
+	if _, _, err := ExtractToken(cases[1].token, secret); err == nil {
+		t.Errorf(`ExtractToken HS512: expected error`)
+	}
+}
+
+//----------------------------------------------------------------------------------------------------------------------------//
+
+// Токен содержит прежние ключи (username, type, exp - целое число секунд) и iat
+func TestCreateTokenClaims(t *testing.T) {
+	now := time.Unix(1764000000, 0).UTC()
+	s, err := CreateToken("u1", "test-secret", "refresh", now, now.Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := jwt.MapClaims{}
+	if _, _, err := jwt.NewParser().ParseUnverified(s, c); err != nil {
+		t.Fatal(err)
+	}
+
+	if c["username"] != "u1" || c["type"] != "refresh" || c["exp"] != float64(now.Add(time.Hour).Unix()) || c["iat"] != float64(now.Unix()) {
+		t.Errorf(`claims: %v`, c)
 	}
 }
 

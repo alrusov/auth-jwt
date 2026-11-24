@@ -1,11 +1,12 @@
 package jwt
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/dgrijalva/jwt-go/v4"
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/alrusov/auth"
 	"github.com/alrusov/config"
@@ -171,24 +172,18 @@ func (ah *AuthHandler) Check(id uint64, prefix string, path string, w http.Respo
 
 //----------------------------------------------------------------------------------------------------------------------------//
 
-// claims --
+// claims -- содержимое токена: username, type и стандартные exp, iat
 type claims struct {
-	jwt.StandardClaims `json:"-"`
-	User               string `json:"username"`
-	Exp                int64  `json:"exp"`
-	Type               string `json:"type"`
-}
-
-// Valid --
-func (c claims) Valid(v *jwt.ValidationHelper) error {
-	return nil
+	User string `json:"username"`
+	Type string `json:"type"`
+	jwt.RegisteredClaims
 }
 
 //----------------------------------------------------------------------------------------------------------------------------//
 
 // KeyFunc -- ключ для проверки подписи токена с секретом secret.
-// Принимается только HS256, которым токены и подписываются (CreateToken): токен с другим alg отвергается
-// до проверки подписи, а не полагается на несовпадение типа ключа.
+// Принимается только HS256, которым токены и подписываются (CreateToken). То же требует ParserOptions;
+// проверка здесь - для тех, кто зовёт jwt.Parse со своими опциями.
 func KeyFunc(secret string) jwt.Keyfunc {
 	return func(t *jwt.Token) (any, error) {
 		if t.Method == nil || t.Method.Alg() != jwt.SigningMethodHS256.Alg() {
@@ -202,23 +197,17 @@ func KeyFunc(secret string) jwt.Keyfunc {
 	}
 }
 
-// Токен без exp библиотека считает бессрочным - такие не принимаем
-func checkExp(claimsToken jwt.MapClaims) error {
-	if _, exists := claimsToken["exp"]; !exists {
-		return fmt.Errorf(`the "exp" claim is not found`)
+// ParserOptions -- только HS256 и обязательный exp: токен без exp был бы бессрочным
+func ParserOptions() []jwt.ParserOption {
+	return []jwt.ParserOption{
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		jwt.WithExpirationRequired(),
 	}
-	return nil
 }
 
 func CheckToken(tokenRaw, tokenType, secret string) (*auth.Identity, error) {
 	claimsToken := jwt.MapClaims{}
-	_, err := jwt.ParseWithClaims(tokenRaw, claimsToken, KeyFunc(secret))
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = checkExp(claimsToken)
+	_, err := jwt.ParseWithClaims(tokenRaw, claimsToken, KeyFunc(secret), ParserOptions()...)
 	if err != nil {
 		return nil, err
 	}
@@ -258,20 +247,16 @@ func ExtractToken(tokenRaw, secret string) (tokenType string, status bool, err e
 	status = false
 
 	claimsToken := jwt.MapClaims{}
-	_, err = jwt.ParseWithClaims(tokenRaw, claimsToken, KeyFunc(secret))
+	_, err = jwt.ParseWithClaims(tokenRaw, claimsToken, KeyFunc(secret), ParserOptions()...)
 
-	if err == nil {
+	switch {
+	case err == nil:
 		status = true
-	} else {
-		_, ok := err.(*jwt.TokenExpiredError)
-		if !ok {
-			return
-		}
-	}
-
-	err = checkExp(claimsToken)
-	if err != nil {
-		status = false
+	case errors.Is(err, jwt.ErrTokenExpired):
+		// Просроченный, но верно подписанный токен - не ошибка, status = false (как раньше)
+		err = nil
+	default:
+		// Всё остальное, в том числе без exp и не HS256, - ошибка
 		return
 	}
 
